@@ -27,8 +27,9 @@ contract ParkingLot is ERC721, Ownable {
     event LeaseTerminated(uint256 id, uint256 refund);
 
     // 修复构造函数
-    constructor() ERC721("ParkingLotNFT", "PLNFT") Ownable(address(0)) {
+    constructor() ERC721("ParkingLotNFT", "PLNFT") Ownable(address(msg.sender)) {
         // 默认初始所有者是合约的部署者，OpenZeppelin 自动处理
+        
     }
 
     // 创建车位 NFT
