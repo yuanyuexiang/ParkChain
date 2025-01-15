@@ -24,8 +24,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
     uint256 public totalSupply;
 
     // 构造函数
-    constructor(address initialOwner) ERC721("ParkingSpotNFT", "PSNFT") Ownable(msg.sender) {
-        transferOwnership(initialOwner);  // 设置初始所有者
+    constructor() ERC721("ParkingSpotNFT", "PSNFT") Ownable(msg.sender) {
+        //transferOwnership(initialOwner);  // 设置初始所有者
     }
 
     // 铸造车位NFT

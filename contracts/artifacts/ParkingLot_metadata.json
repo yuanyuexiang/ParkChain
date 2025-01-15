@@ -6,13 +6,7 @@
 	"output": {
 		"abi": [
 			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "initialOwner",
-						"type": "address"
-					}
-				],
+				"inputs": [],
 				"stateMutability": "nonpayable",
 				"type": "constructor"
 			},
@@ -1053,11 +1047,11 @@
 			]
 		},
 		"contracts/ParkingLot.sol": {
-			"keccak256": "0xdbe518b700e1733330e87ad13dda88f89f641bfbf2e8999eee5b9e08aac57fb6",
+			"keccak256": "0xff45946545844bb3efa4b65efeaa60d3c64acaec1991b33fba908be07e47d2bb",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://cb150ba37fe6a6048925224bf7f280f98a7e7127e3674c8418b450c4a059325c",
-				"dweb:/ipfs/QmdXCXszmhFhGwaNwE9v1aUtw5ifEfht7CyrjnEEmzmgoL"
+				"bzz-raw://40a99bd056e4967f249f41553efd8d5427e16f9f20280242f8cae39ad1ac07a9",
+				"dweb:/ipfs/Qmaa9vGVAsG2a1FnuVrg1AUNjTcKoQzLxSqP6pURu8iS32"
 			]
 		}
 	},
