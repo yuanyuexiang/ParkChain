@@ -1,19 +1,66 @@
-# ParkChain
-链端（区块链相关） ParkChain 结合区块链（Chain）和车位（Park），突出了链端的去中心化特性。
+## Foundry
 
-$ forge install transmissions11/solmate Openzeppelin/openzeppelin-contracts --no-commit
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
+Foundry consists of:
 
-./geth attach https://ethereum.matrix-net.tech/  
-0xadA778c33B4CA3f5374D410396b84DE2B08CC567
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-eth.sendTransaction({from: eth.accounts[0], to: "0x05b0b6Aa948B1cb186E5206a2bb0B871b45242aa", value: web3.toWei(10, "ether")})
+## Documentation
 
-孙
-0xA500Eca69baE6Ad1eBFB1d061b2577BAd873f228
+https://book.getfoundry.sh/
 
-杨
-0xB36bbd58265B9D7BbdF3e1d142fA26CEc75BC073
+## Usage
 
-陈
-0x05b0b6Aa948B1cb186E5206a2bb0B871b45242aa
+### Build
+
+```shell
+$ forge build
+```
+
+### Test
+
+```shell
+$ forge test
+```
+
+### Format
+
+```shell
+$ forge fmt
+```
+
+### Gas Snapshots
+
+```shell
+$ forge snapshot
+```
+
+### Anvil
+
+```shell
+$ anvil
+```
+
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
+```
