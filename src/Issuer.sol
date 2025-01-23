@@ -14,7 +14,6 @@ import { ParkLotToken } from "./ParkLotToken.sol";
  *          information of the park lot.
  *          The fulfillRequest function will handle the response and mint the token.
  */
-
 contract Issuer is FunctionsClient, OwnerIsCreator {
     using FunctionsRequest for FunctionsRequest.Request;
 
@@ -43,9 +42,9 @@ contract Issuer is FunctionsClient, OwnerIsCreator {
 
     function issue(
         address to,
-        string[] memory args,
-        uint256 amount,
-        uint64 subscriptionId,
+        string[] memory args,///用户id
+        uint256 amount, ///发行数量 1
+        uint64 subscriptionId,///订阅id
         uint32 gasLimit,
         bytes32 donID
     ) external onlyOwner returns (bytes32 requestId) {
