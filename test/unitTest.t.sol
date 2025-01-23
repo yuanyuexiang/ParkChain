@@ -15,16 +15,17 @@ contract unitTest is Test {
     address public user;
     uint256 public privateKey;
     uint256 public amount = 1; ///发行数量 1
-    uint64 public subscriptionId = 4211; ///订阅id
-    uint32 public gasLimit = 30000;
+    uint64 public subscriptionId;
+    uint32 public gasLimit;
     string[] public args = ["1"]; ///url参数id
     string public response = "ipfs://Qmd2xCfQHecFBg1LDNtoEM3EgyCvCRmUj5d2mVbECPbRkB";
-    bytes32 public donID = 0x66756e2d657468657265756d2d7365706f6c69612d3100000000000000000000;
+    bytes32 public donID;
 
     function setUp() public {
         (user, privateKey) = makeAddrAndKey("user");
         deployment = new Deployment();
         (mockFunctionRouters, parkLotToken, issuer) = deployment.run(user);
+        (subscriptionId, gasLimit, donID, ) = deployment.networkParams();
     }
 
     function test_issue_onlyOwner() public {
@@ -37,9 +38,8 @@ contract unitTest is Test {
     /**
      * @notice  This function will test whether the fulfill function can mint the token correctly
      *          after the issue function generate the requestId.
-     *
      */
-    function test_issue_fulfill() public {
+    function test_issue_fulfill_local() public {
         vm.prank(user);
         bytes32 requestId = issuer.issue(user, args, amount, subscriptionId, gasLimit, donID);
         mockFunctionRouters.handleOracleFulfillment(address(issuer), requestId, abi.encodePacked(response), hex"");
