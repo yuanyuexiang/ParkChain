@@ -28,15 +28,25 @@ contract unitTest is Test {
     }
 
     function test_issue_onlyOwner() public {
-        vm.prank(user);
+        address hacker = makeAddr("hacker");
+        vm.prank(hacker);
         vm.expectRevert();
         issuer.issue(user, args, amount, subscriptionId, gasLimit, donID);
     }
 
+    /**
+     * @notice  This function will test whether the fulfill function can mint the token correctly
+     *          after the issue function generate the requestId.
+     *
+     */
     function test_issue_fulfill() public {
         vm.prank(user);
         bytes32 requestId = issuer.issue(user, args, amount, subscriptionId, gasLimit, donID);
         mockFunctionRouters.handleOracleFulfillment(address(issuer), requestId, abi.encodePacked(response), hex"");
         assertEq(parkLotToken.uri(0), response);
+        uint256[] memory tokenList = parkLotToken.getAddressToTokenIds(user);
+        assertEq(tokenList[0], 0);
     }
+
+    // function test_burn() public {}
 }
