@@ -30,15 +30,11 @@ contract ParkingLot is ERC721Burnable, Ownable {
 
     // 铸造车位NFT
     function mint(
-        address to,
         string memory location,
         uint256 rentPrice,
-        int256 latitude,
-        int256 longitude
+        int256 longitude,
+        int256 latitude
     ) public onlyOwner {
-        require(latitude >= -90 && latitude <= 90, "Invalid latitude");
-        require(longitude >= -180 && longitude <= 180, "Invalid longitude");
-
         uint256 tokenId = totalSupply + 1;
         parkingSpots[tokenId] = ParkingSpot({
             id: tokenId,
@@ -51,7 +47,7 @@ contract ParkingLot is ERC721Burnable, Ownable {
             longitude: longitude
         });
 
-        _mint(to, tokenId);
+        _mint(msg.sender, tokenId);
         totalSupply++;
     }
 
