@@ -16,10 +16,9 @@ contract ParkingLot is ERC721Burnable, Ownable {
      * @param picture 车位图片
      * @param owner 车位所有者
      * @param location 车位地址
-     * @param isRented 是否已租赁
      * @param renter 租户地址
-     * @param rentEndTime 租赁结束时间
-     * @param rentPrice 租金（单位：wei）
+     * @param rent_end_time 租赁结束时间
+     * @param rent_price 租金（单位：wei）
      * @param latitude 纬度
      * @param longitude 经度
      * @param create_time 创建时间
@@ -30,9 +29,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
         uint256 id;           // 车位ID
         string name;          // 车位名称
         string picture;       // 车位图片
-        address owner;        // 车位所有者
         string location;      // 车位名称或地址
-        bool rented;        // 是否已租赁
+        address owner;        // 车位所有者
         address renter;       // 租户地址
         uint256 rent_end_time;  // 租赁结束时间
         uint256 rent_price;    // 租金（单位：wei）
@@ -69,7 +67,6 @@ contract ParkingLot is ERC721Burnable, Ownable {
             picture: picture,
             owner: msg.sender,
             location: location,
-            rented: false,
             renter: address(0),
             rent_end_time: 0,
             rent_price: rentPrice,
@@ -87,10 +84,9 @@ contract ParkingLot is ERC721Burnable, Ownable {
     function rent(uint256 tokenId, uint256 duration) public payable {
         ParkingSpot storage spot = parkingSpots[tokenId];
         require(ownerOf(tokenId) != address(0), "Car spot does not exist");
-        require(!spot.rented || block.timestamp > spot.rent_end_time, "Spot is already rented");
+        require(spot.renter!=address(0) || block.timestamp > spot.rent_end_time, "Spot is already rented");
         require(msg.value >= spot.rent_price, "Insufficient payment");
 
-        spot.rented = true;
         spot.renter = msg.sender;
         spot.rent_end_time = block.timestamp + duration;
 
@@ -102,11 +98,9 @@ contract ParkingLot is ERC721Burnable, Ownable {
     function terminateRental(uint256 tokenId) public {
         ParkingSpot storage spot = parkingSpots[tokenId];
         require(ownerOf(tokenId) != address(0), "Parking spot does not exist");
-        require(spot.rented, "Parking spot is not rented");
         require(msg.sender == spot.renter, "Only the renter can terminate the rental");
 
         // 退租逻辑
-        spot.rented = false;
         spot.renter = address(0);
         spot.rent_end_time = 0;
 
@@ -120,7 +114,7 @@ contract ParkingLot is ERC721Burnable, Ownable {
     function revokeParkingSpot(uint256 tokenId) public onlyOwner {
         require(ownerOf(tokenId) != address(0), "Parking spot does not exist");
         ParkingSpot storage spot = parkingSpots[tokenId];
-        require(!spot.rented || block.timestamp > spot.rent_end_time, "Spot is currently rented");
+        require(spot.renter!=address(0) || block.timestamp > spot.rent_end_time, "Spot is currently rented");
 
         // 销毁NFT并删除车位信息
         _burn(tokenId);
@@ -130,7 +124,7 @@ contract ParkingLot is ERC721Burnable, Ownable {
     // 检查车位租赁状态
     function checkRentalStatus(uint256 tokenId) public view returns (bool) {
         ParkingSpot memory spot = parkingSpots[tokenId];
-        return spot.rented && block.timestamp <= spot.rent_end_time;
+        return spot.renter!=address(0) && block.timestamp <= spot.rent_end_time;
     }
 
     // 获取所有车位信息
