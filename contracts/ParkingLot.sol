@@ -82,17 +82,25 @@ contract ParkingLot is ERC721Burnable, Ownable {
 
     // 租赁车位
     function rent(uint256 tokenId, uint256 duration) public payable {
+        address owner = ownerOf(tokenId); // 存储所有者，减少重复调用
+        require(owner != address(0), "Car spot does not exist");
+
         ParkingSpot storage spot = parkingSpots[tokenId];
-        require(ownerOf(tokenId) != address(0), "Car spot does not exist");
-        require(spot.renter!=address(0) || block.timestamp > spot.rent_end_time, "Spot is already rented");
-        require(msg.value >= spot.rent_price, "Insufficient payment");
+
+        require(spot.renter == address(0) || block.timestamp > spot.rent_end_time, "Spot is already rented");
+
+        // 计算租金（从人民币转换成 ETH）
+        uint256 totalRent = spot.rent_price * duration;
+        require(msg.value >= totalRent, "Insufficient payment");
 
         spot.renter = msg.sender;
-        spot.rent_end_time = block.timestamp + duration;
+        spot.rent_end_time = block.timestamp + (duration * 1 days); // 计算租赁结束时间
 
-        // 转账租金给车位所有者
-        payable(ownerOf(tokenId)).transfer(msg.value);
+        // 将租金转给车位所有者
+        (bool success, ) = payable(owner).call{value: msg.value}("");
+        require(success, "Transfer failed");
     }
+
 
     // 退租车位
     function terminateRental(uint256 tokenId) public {
