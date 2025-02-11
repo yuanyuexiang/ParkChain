@@ -14,8 +14,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
      * @param id 车位ID
      * @param name 车位名称
      * @param picture 车位图片
-     * @param owner 车位所有者
      * @param location 车位地址
+     * @param owner 车位所有者
      * @param renter 租户地址
      * @param rent_end_time 租赁结束时间
      * @param rent_price 租金（单位：wei）
@@ -32,8 +32,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
         string location;      // 车位名称或地址
         address owner;        // 车位所有者
         address renter;       // 租户地址
-        uint256 rent_end_time;  // 租赁结束时间
-        uint256 rent_price;    // 租金（单位：wei）
+        uint256 rent_end_time;// 租赁结束时间
+        uint256 rent_price;   // 租金（单位：wei）
         int256 latitude;      // 纬度
         int256 longitude;     // 经度
         uint256 create_time;  // 创建时间
