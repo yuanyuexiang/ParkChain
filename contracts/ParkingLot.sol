@@ -46,6 +46,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
     // 已铸造的车位总数
     uint256 public totalSupply;
 
+    uint256 public nextTokenId = 1;
+
     // 构造函数
     constructor() ERC721("ParkingSpotNFT", "PSNFT") Ownable(msg.sender) {
         transferOwnership(msg.sender);  // 设置初始所有者
@@ -59,8 +61,10 @@ contract ParkingLot is ERC721Burnable, Ownable {
         uint256 rentPrice,
         int256 longitude,
         int256 latitude
-    ) public onlyOwner {
-        uint256 tokenId = totalSupply + 1;
+    ) public {
+        uint256 tokenId = nextTokenId;
+        nextTokenId++; // 递增，保证ID连续
+
         parkingSpots[tokenId] = ParkingSpot({
             id: tokenId,
             name: name,
@@ -124,9 +128,9 @@ contract ParkingLot is ERC721Burnable, Ownable {
         ParkingSpot storage spot = parkingSpots[tokenId];
         require(spot.renter!=address(0) || block.timestamp > spot.rent_end_time, "Spot is currently rented");
 
-        // 销毁NFT并删除车位信息
-        _burn(tokenId);
-        delete parkingSpots[tokenId];
+        delete parkingSpots[tokenId]; // 先删除车位信息
+        _burn(tokenId);// 销毁NFT并删除车位信息
+        totalSupply--;  // 维护正确的总量
     }
 
     // 检查车位租赁状态
@@ -137,11 +141,19 @@ contract ParkingLot is ERC721Burnable, Ownable {
 
     // 获取所有车位信息
     function getAllParkingSpots() public view returns (ParkingSpot[] memory) {
-        ParkingSpot[] memory spots = new ParkingSpot[](totalSupply);
-
+        uint count = 0;
         for (uint256 i = 1; i <= totalSupply; i++) {
-            if (ownerOf(i) != address(0)) {
-                spots[i - 1] = parkingSpots[i];
+            if (parkingSpots[i].id != 0) {
+                count++;
+            }
+        }
+
+        ParkingSpot[] memory spots = new ParkingSpot[](count);
+        uint index = 0;
+        for (uint256 i = 1; i <= totalSupply; i++) {
+            if (parkingSpots[i].id != 0) {
+                spots[index] = parkingSpots[i];
+                index++;
             }
         }
 
@@ -150,13 +162,23 @@ contract ParkingLot is ERC721Burnable, Ownable {
 
     // 获取我的车位（所有者或者租用的）
     function getMyParkingSpots() public view returns (ParkingSpot[] memory) {
-        ParkingSpot[] memory spots = new ParkingSpot[](totalSupply);
-        uint256 count = 0;
+        uint count = 0;
+
+        // 先统计符合条件的车位数量
+        for (uint256 i = 1; i <= totalSupply; i++) {
+            if (parkingSpots[i].id != 0 && (parkingSpots[i].owner == msg.sender || parkingSpots[i].renter == msg.sender)) {
+                count++;
+            }
+        }
+
+        // 只分配需要的空间，避免浪费
+        ParkingSpot[] memory spots = new ParkingSpot[](count);
+        uint index = 0;
 
         for (uint256 i = 1; i <= totalSupply; i++) {
-            if (ownerOf(i) == msg.sender || parkingSpots[i].renter == msg.sender) {
-                spots[count] = parkingSpots[i];
-                count++;
+            if (parkingSpots[i].id != 0 && (parkingSpots[i].owner == msg.sender || parkingSpots[i].renter == msg.sender)) {
+                spots[index] = parkingSpots[i];
+                index++;
             }
         }
 
