@@ -6,55 +6,99 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title ParkingLot
- * @dev 车位合约，用于管理车位NFT的铸造、租赁、退租、撤销等操作
+ * @author matrix
+ * @notice 一个简单的车位 NFT 合约
  */
 contract ParkingLot is ERC721Burnable, Ownable {
+
     /**
-     * @notice 车位信息结构体
-     * @param id 车位ID
+     * @notice 车位结构体
+     * @param id 车位 ID
      * @param name 车位名称
      * @param picture 车位图片
-     * @param location 车位地址
-     * @param owner 车位所有者
-     * @param renter 租户地址
-     * @param rent_end_time 租赁结束时间
-     * @param rent_price 租金（单位：wei）
-     * @param latitude 纬度
-     * @param longitude 经度
-     * @param create_time 创建时间
-     * @param update_time 更新时间
-     * @dev 该结构体用于存储车位的相关信息
+     * @param location 车位位置
+     * @param owner 车位拥有者
+     * @param renter 车位租户
+     * @param rent_end_time 车位租赁结束时间
+     * @param rent_price 车位租金
+     * @param latitude 车位纬度
+     * @param longitude 车位经度
+     * @param create_time 车位创建时间
+     * @param update_time 车位更新时间
      */
     struct ParkingSpot {
-        uint256 id;           // 车位ID
-        string name;          // 车位名称
-        string picture;       // 车位图片
-        string location;      // 车位名称或地址
-        address owner;        // 车位所有者
-        address renter;       // 租户地址
-        uint256 rent_end_time;// 租赁结束时间
-        uint256 rent_price;   // 租金（单位：wei）
-        int256 latitude;      // 纬度
-        int256 longitude;     // 经度
-        uint256 create_time;  // 创建时间
-        uint256 update_time;  // 更新时间
+        uint256 id;
+        string name;
+        string picture;
+        string location;
+        address owner;
+        address renter;
+        uint256 rent_end_time;
+        uint256 rent_price;
+        int256 latitude;
+        int256 longitude;
+        uint256 create_time;
+        uint256 update_time;
     }
 
-    // 车位ID到车位信息的映射
+    /**
+     * @notice 存储所有车位
+     */
     mapping(uint256 => ParkingSpot) public parkingSpots;
 
-    // 已铸造的车位总数
-    uint256 public totalSupply;
-
+    /**
+     * @notice 下一个车位 ID
+     */
     uint256 public nextTokenId = 1;
 
-    // 构造函数
-    constructor() ERC721("ParkingSpotNFT", "PSNFT") Ownable(msg.sender) {
-        transferOwnership(msg.sender);  // 设置初始所有者
-    }
+    uint256 public activeSupply; // 只统计有效 NFT
 
-    // 铸造车位NFT
-    function mint(
+    uint256[] public activeParkingSpots; // 存储有效 tokenId
+
+    /**
+     * @notice 铸造事件
+     * @param tokenId 车位的唯一标识符
+     */
+    event ParkingSpotMinted(uint256 tokenId, address owner);
+
+    /**
+     * @notice 租用事件
+     * @param tokenId 车位的唯一标识符
+     */
+    event ParkingSpotRented(uint256 tokenId, address renter,  uint256 rentStartTime, uint256 rentEndTime);
+    
+    /**
+     * @notice 销毁事件
+     * @param tokenId 车位的唯一标识符
+     */
+    event ParkingSpotBurned(uint256 tokenId);
+
+    /**
+     * @notice 更新事件
+     * @param tokenId 车位的唯一标识符
+     */
+    event ParkingSpotUpdated(uint256 tokenId);
+
+    /**
+     * @notice 退租事件
+     * @param tokenId 车位的唯一标识符
+     * @param renter 租户
+     * @param terminateRentalTime 退租时间
+     */
+    event ParkingSpotTerminateRental(uint256 tokenId, address renter, uint256 terminateRentalTime);
+
+    constructor() ERC721("ParkingSpotNFT", "PSNFT") Ownable(msg.sender) {}
+
+    /**
+     * @notice 铸造车位
+     * @param name The name of the parking lot
+     * @param picture The picture of the parking lot
+     * @param location The location of the parking lot
+     * @param rentPrice The rent price of the parking lot
+     * @param longitude The longitude of the parking lot
+     * @param latitude The latitude of the parking lot
+     */
+    function mintParkingSpot(
         string memory name,
         string memory picture,
         string memory location,
@@ -62,9 +106,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
         int256 longitude,
         int256 latitude
     ) public {
-        uint256 tokenId = nextTokenId;
-        nextTokenId++; // 递增，保证ID连续
-
+        uint256 tokenId = nextTokenId++;
+        
         parkingSpots[tokenId] = ParkingSpot({
             id: tokenId,
             name: name,
@@ -81,111 +124,87 @@ contract ParkingLot is ERC721Burnable, Ownable {
         });
 
         _mint(msg.sender, tokenId);
-        totalSupply++;
+        activeParkingSpots.push(tokenId);
+        activeSupply++;
+
+        emit ParkingSpotMinted(tokenId, msg.sender);
     }
 
-    // 租赁车位
-    function rent(uint256 tokenId, uint256 duration) public payable {
-        address owner = ownerOf(tokenId); // 存储所有者，减少重复调用
-        require(owner != address(0), "Car spot does not exist");
-
+    /**
+     * @param tokenId 车位的唯一标识符
+     * @param duration 车位的租赁时长
+     */
+    function rentParkingSpot(uint256 tokenId, uint256 duration) public payable {
+        require(ownerOf(tokenId) != address(0), "Car spot does not exist");
         ParkingSpot storage spot = parkingSpots[tokenId];
 
         require(spot.renter == address(0) || block.timestamp > spot.rent_end_time, "Spot is already rented");
-
-        // 计算租金（从人民币转换成 ETH）
-        uint256 totalRent = spot.rent_price * duration;
-        require(msg.value >= totalRent, "Insufficient payment");
+        
+        // 要求租户不能是车位的拥有者
+        require(msg.sender != spot.owner, "Owner cannot rent his own spot");
 
         spot.renter = msg.sender;
-        spot.rent_end_time = block.timestamp + (duration * 1 days); // 计算租赁结束时间
+        spot.rent_end_time = block.timestamp + (duration * 1 days);
 
-        // 将租金转给车位所有者
-        (bool success, ) = payable(owner).call{value: msg.value}("");
+        (bool success, ) = payable(spot.owner).call{value: msg.value}("");
         require(success, "Transfer failed");
+
+        emit ParkingSpotRented(tokenId, msg.sender, block.timestamp, spot.rent_end_time);
     }
 
-
-    // 退租车位
-    function terminateRental(uint256 tokenId) public {
+    /**
+     * 退租车位
+     * @param tokenId 车位的唯一标识符
+     */
+    function terminateRentalParkingSpot(uint256 tokenId) public {
         ParkingSpot storage spot = parkingSpots[tokenId];
+        
         require(ownerOf(tokenId) != address(0), "Parking spot does not exist");
+        require(spot.renter != address(0), "This spot is not currently rented");
         require(msg.sender == spot.renter, "Only the renter can terminate the rental");
 
-        // 退租逻辑
         spot.renter = address(0);
         spot.rent_end_time = 0;
-
-        // 可选择退款逻辑：按租赁时长计算未使用时间的租金
-        uint256 unusedTime = spot.rent_end_time - block.timestamp;
-        uint256 refundAmount = (spot.rent_price * unusedTime) / (spot.rent_end_time - block.timestamp);
-        payable(msg.sender).transfer(refundAmount);
+        emit ParkingSpotTerminateRental(tokenId, msg.sender, block.timestamp);
     }
 
-    // 撤销车位
-    function revokeParkingSpot(uint256 tokenId) public onlyOwner {
+    /**
+     * 销毁车位
+     * @param tokenId 车位的唯一标识符
+     */
+    function burnParkingSpot(uint256 tokenId) public {
         require(ownerOf(tokenId) != address(0), "Parking spot does not exist");
         ParkingSpot storage spot = parkingSpots[tokenId];
-        require(spot.renter!=address(0) || block.timestamp > spot.rent_end_time, "Spot is currently rented");
+        require(spot.owner == msg.sender, "You are not the owner of this parking spot");
+        require(spot.renter == address(0) || block.timestamp > spot.rent_end_time, "Spot is currently rented");
 
-        delete parkingSpots[tokenId]; // 先删除车位信息
-        _burn(tokenId);// 销毁NFT并删除车位信息
-        totalSupply--;  // 维护正确的总量
-    }
+        delete parkingSpots[tokenId]; 
+        _burn(tokenId);
 
-    // 检查车位租赁状态
-    function checkRentalStatus(uint256 tokenId) public view returns (bool) {
-        ParkingSpot memory spot = parkingSpots[tokenId];
-        return spot.renter!=address(0) && block.timestamp <= spot.rent_end_time;
-    }
-
-    // 获取所有车位信息
-    function getAllParkingSpots() public view returns (ParkingSpot[] memory) {
-        uint count = 0;
-        for (uint256 i = 1; i <= totalSupply; i++) {
-            if (parkingSpots[i].id != 0) {
-                count++;
+        // 从 activeParkingSpots 中移除
+        for (uint i = 0; i < activeParkingSpots.length; i++) {
+            if (activeParkingSpots[i] == tokenId) {
+                activeParkingSpots[i] = activeParkingSpots[activeParkingSpots.length - 1];
+                activeParkingSpots.pop();
+                break;
             }
         }
 
-        ParkingSpot[] memory spots = new ParkingSpot[](count);
-        uint index = 0;
-        for (uint256 i = 1; i <= totalSupply; i++) {
-            if (parkingSpots[i].id != 0) {
-                spots[index] = parkingSpots[i];
-                index++;
-            }
-        }
+        activeSupply--;
 
-        return spots;
+        emit ParkingSpotBurned(tokenId);
     }
 
-    // 获取我的车位（所有者或者租用的）
-    function getMyParkingSpots() public view returns (ParkingSpot[] memory) {
-        uint count = 0;
-
-        // 先统计符合条件的车位数量
-        for (uint256 i = 1; i <= totalSupply; i++) {
-            if (parkingSpots[i].id != 0 && (parkingSpots[i].owner == msg.sender || parkingSpots[i].renter == msg.sender)) {
-                count++;
-            }
-        }
-
-        // 只分配需要的空间，避免浪费
-        ParkingSpot[] memory spots = new ParkingSpot[](count);
-        uint index = 0;
-
-        for (uint256 i = 1; i <= totalSupply; i++) {
-            if (parkingSpots[i].id != 0 && (parkingSpots[i].owner == msg.sender || parkingSpots[i].renter == msg.sender)) {
-                spots[index] = parkingSpots[i];
-                index++;
-            }
-        }
-
-        return spots;
-    }
-
-    // 更新自己的车位信息
+    /**
+     * 更新车位
+     * @param tokenId 车位的唯一标识符
+     * @param name 车位名称
+     * @param picture 车位图片
+     * @param location 车位位置
+     * @param rentPrice 车位租金
+     * @param longitude 车位经度
+     * @param latitude 车位纬度
+     */
     function updateParkingSpot(
         uint256 tokenId,
         string memory name,
@@ -196,8 +215,8 @@ contract ParkingLot is ERC721Burnable, Ownable {
         int256 latitude
     ) public {
         require(ownerOf(tokenId) == msg.sender, "Only the owner can update the parking spot");
-
         ParkingSpot storage spot = parkingSpots[tokenId];
+
         spot.name = name;
         spot.picture = picture;
         spot.location = location;
@@ -205,5 +224,42 @@ contract ParkingLot is ERC721Burnable, Ownable {
         spot.longitude = longitude;
         spot.latitude = latitude;
         spot.update_time = block.timestamp;
+
+        emit ParkingSpotUpdated(tokenId);
+    }
+
+    /**
+     * 获取所有车位
+     * @return ParkingSpot[] 所有车位
+     */
+    function getAllParkingSpots() public view returns (ParkingSpot[] memory) {
+        ParkingSpot[] memory spots = new ParkingSpot[](activeSupply);
+        for (uint256 i = 0; i < activeParkingSpots.length; i++) {
+            spots[i] = parkingSpots[activeParkingSpots[i]];
+        }
+        return spots;
+    }
+
+    /**
+     * 获取我的车位
+     * @return ParkingSpot[] 我的车位
+     */
+    function getMyParkingSpots() public view returns (ParkingSpot[] memory) {
+        uint count = 0;
+        for (uint256 i = 0; i < activeParkingSpots.length; i++) {
+            if (parkingSpots[activeParkingSpots[i]].owner == msg.sender || parkingSpots[activeParkingSpots[i]].renter == msg.sender) {
+                count++;
+            }
+        }
+
+        ParkingSpot[] memory spots = new ParkingSpot[](count);
+        uint index = 0;
+        for (uint256 i = 0; i < activeParkingSpots.length; i++) {
+            if (parkingSpots[activeParkingSpots[i]].owner == msg.sender || parkingSpots[activeParkingSpots[i]].renter == msg.sender) {
+                spots[index] = parkingSpots[activeParkingSpots[i]];
+                index++;
+            }
+        }
+        return spots;
     }
 }
